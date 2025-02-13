@@ -181,6 +181,21 @@ th {
     cursor: pointer;
 }
 
+.logout-btn {
+    display: inline-block;
+    background-color: #e74c3c;
+    color: white;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    margin-left: 1rem;
+}
+
+.logout-btn:hover {
+    background-color: #c0392b;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
