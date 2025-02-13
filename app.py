@@ -1,11 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
-import os
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
 # Database configuration
 DB_CONFIG = {
@@ -53,10 +52,15 @@ def create_table():
 # Create the table when the application starts
 create_table()
 
-# Route to serve the HTML template
+# Route to serve the main movie list page
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Route to serve the add movie page
+@app.route('/add_movie')
+def add_movie_page():
+    return render_template('add_movie.html')
 
 # API endpoint to get all movies
 @app.route('/api/movies', methods=['GET'])
@@ -67,7 +71,20 @@ def get_movies():
             cursor = connection.cursor(dictionary=True)
             cursor.execute("SELECT * FROM movies ORDER BY created_at DESC")
             movies = cursor.fetchall()
-            return jsonify(movies)
+            # Convert the movies into a list of dictionaries
+            movie_list = []
+            for movie in movies:
+                movie_dict = {
+                    'id': movie['id'],
+                    'title': movie['title'],
+                    'director': movie['director'],
+                    'release_year': movie['release_year'],
+                    'genre': movie['genre'],
+                    'rating': float(movie['rating']) if movie['rating'] else None,
+                    'created_at': movie['created_at'].isoformat() if movie['created_at'] else None
+                }
+                movie_list.append(movie_dict)
+            return jsonify({'movies': movie_list})
         except Error as e:
             return jsonify({"error": str(e)}), 500
         finally:
