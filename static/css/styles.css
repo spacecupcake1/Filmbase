@@ -25,6 +25,10 @@ header {
     margin-bottom: 2rem;
 }
 
+.center{
+    text-align: center;
+}
+
 nav {
     margin-top: 1rem;
 }

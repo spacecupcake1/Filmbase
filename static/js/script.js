@@ -6,63 +6,129 @@ const movieList = document.querySelector('.movie-list tbody');
 const editModal = document.getElementById('editModal');
 const editMovieForm = document.getElementById('editMovieForm');
 const closeModal = document.querySelector('.close');
+const adminControls = document.getElementById('adminControls');
+const actionsHeader = document.getElementById('actionsHeader');
+const username = document.getElementById('username');
+const userRole = document.getElementById('userRole');
 
-// Load movies when page loads
-document.addEventListener('DOMContentLoaded', loadMovies);
+// Check user role on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/api/user-info');
+        // Check if response redirects to login
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error('Failed to get user info');
+        }
+
+        const data = await response.json();
+        
+        // Update user info
+        username.textContent = data.username;
+        userRole.textContent = data.role;
+
+        // Show admin controls if user is admin
+        if (data.role === 'admin') {
+            adminControls.style.display = 'inline-block';
+            actionsHeader.style.display = 'table-cell';
+        }
+
+        // Load movies
+        loadMovies(data.role === 'admin');
+    } catch (error) {
+        console.error('Error loading user info:', error);
+        // Redirect to login if there's an error
+        window.location.href = '/login';
+    }
+});
 
 // Load all movies
-async function loadMovies() {
+async function loadMovies(isAdmin) {
     try {
         const response = await fetch(`${API_URL}/movies`);
+        
+        // Check if response redirects to login
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error('Failed to load movies');
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Received non-JSON response');
+        }
+
         const data = await response.json();
         if (data.movies) {
-            displayMovies(data.movies);
+            displayMovies(data.movies, isAdmin);
         } else {
-            displayMovies([]);  // Display empty array if no movies
+            displayMovies([], isAdmin);
         }
     } catch (error) {
         console.error('Error details:', error);
-        alert('Error loading movies: ' + error.message);
+        if (error.message.includes('JSON')) {
+            // If we get HTML instead of JSON, redirect to login
+            window.location.href = '/login';
+        } else {
+            alert('Error loading movies: ' + error.message);
+        }
     }
 }
 
 // Display movies in table
-function displayMovies(movies) {
+function displayMovies(movies, isAdmin) {
     movieList.innerHTML = '';
     if (!Array.isArray(movies)) {
         console.error('Movies data is not an array:', movies);
         return;
     }
+
+    // Safely escape text and handle null/undefined values
+    const safeText = (text) => text ? text.toString().replace(/</g, '&lt;').replace(/'/g, '&#39;') : '';
+    
     movies.forEach(movie => {
         const row = document.createElement('tr');
-        // Safely escape text and handle null/undefined values
-        const safeText = (text) => text ? text.replace(/</g, '&lt;').replace(/'/g, '&#39;') : '';
-        
-        row.innerHTML = `
+        let html = `
             <td>${safeText(movie.title) || ''}</td>
             <td>${safeText(movie.director) || ''}</td>
             <td>${movie.release_year || ''}</td>
             <td>${safeText(movie.genre) || ''}</td>
             <td>${movie.rating || ''}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="edit-btn" onclick="openEditModal(
-                        ${movie.id || 0}, 
-                        '${safeText(movie.title) || ''}', 
-                        '${safeText(movie.director) || ''}', 
-                        ${movie.release_year || 0}, 
-                        '${safeText(movie.genre) || ''}', 
-                        ${movie.rating || 0}
-                    )">Edit</button>
-                    <button class="delete-btn" onclick="deleteMovie(${movie.id || 0})">Delete</button>
-                </div>
-            </td>
         `;
+
+        // Only add action buttons for admin users
+        if (isAdmin) {
+            html += `
+                <td>
+                    <div class="action-buttons">
+                        <button class="edit-btn" onclick="openEditModal(
+                            ${movie.id || 0}, 
+                            '${safeText(movie.title) || ''}', 
+                            '${safeText(movie.director) || ''}', 
+                            ${movie.release_year || 0}, 
+                            '${safeText(movie.genre) || ''}', 
+                            ${movie.rating || 0}
+                        )">Edit</button>
+                        <button class="delete-btn" onclick="deleteMovie(${movie.id || 0})">Delete</button>
+                    </div>
+                </td>
+            `;
+        }
+
+        row.innerHTML = html;
         movieList.appendChild(row);
     });
 }
 
-// Open edit modal
+// Edit and Delete functions remain the same...
 function openEditModal(id, title, director, releaseYear, genre, rating) {
     editModal.style.display = 'block';
     document.getElementById('editTitle').value = title;
@@ -105,16 +171,30 @@ editMovieForm.addEventListener('submit', async (e) => {
             body: JSON.stringify(formData)
         });
 
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+
         if (response.ok) {
             editModal.style.display = 'none';
-            loadMovies();
+            loadMovies(true);
             alert('Movie updated successfully!');
         } else {
             const data = await response.json();
-            alert(`Error: ${data.error}`);
+            if (response.status === 403) {
+                alert('You do not have permission to perform this action');
+            } else {
+                alert(`Error: ${data.error}`);
+            }
         }
     } catch (error) {
-        alert('Error updating movie: ' + error.message);
+        console.error('Error updating movie:', error);
+        if (error.message.includes('JSON')) {
+            window.location.href = '/login';
+        } else {
+            alert('Error updating movie: ' + error.message);
+        }
     }
 });
 
@@ -126,15 +206,29 @@ async function deleteMovie(movieId) {
                 method: 'DELETE'
             });
 
+            if (response.redirected) {
+                window.location.href = response.url;
+                return;
+            }
+
             if (response.ok) {
-                loadMovies();
+                loadMovies(true);
                 alert('Movie deleted successfully!');
             } else {
                 const data = await response.json();
-                alert(`Error: ${data.error}`);
+                if (response.status === 403) {
+                    alert('You do not have permission to perform this action');
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
             }
         } catch (error) {
-            alert('Error deleting movie: ' + error.message);
+            console.error('Error deleting movie:', error);
+            if (error.message.includes('JSON')) {
+                window.location.href = '/login';
+            } else {
+                alert('Error deleting movie: ' + error.message);
+            }
         }
     }
 }

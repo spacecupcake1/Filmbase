@@ -10,12 +10,24 @@
     <header>
         <h1>Movie Management System</h1>
         <nav>
-            <a href="/add_movie" class="add-btn">Add New Movie</a>
+            <span id="userInfo" class="user-info">
+                Welcome, <span id="username"></span> (<span id="userRole"></span>)
+            </span>
+            <br>
+            <a href="/logout" class="logout-btn">Logout</a>
         </nav>
     </header>
 
     <div class="container">
-        <!-- Movie List -->
+
+        <div class="center">
+            <div id="adminControls" style="display: none;">
+                    <a href="/add_movie" class="add-btn">Add New Movie</a>
+            </div>
+        </div>
+
+        <br>
+
         <div class="movie-list">
             <h2>Movie List</h2>
             <table>
@@ -26,7 +38,7 @@
                         <th>Release Year</th>
                         <th>Genre</th>
                         <th>Rating</th>
-                        <th>Actions</th>
+                        <th id="actionsHeader" style="display: none;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,7 +48,7 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Modal (only shown for admin users) -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
