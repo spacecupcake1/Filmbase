@@ -47,6 +47,7 @@ def migrate_users_and_movies():
                 user_data = {
                     'username': user['username'],
                     'email': user['email'],
+                    'password': user['password'],
                     'role': user['role'],
                     'created_at': user['created_at']
                 }
