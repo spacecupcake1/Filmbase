@@ -159,26 +159,50 @@ def add_movie():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/movies/<string:movie_id>', methods=['GET'])
+@login_required
+def get_movie(movie_id):
+    db = get_mongo_connection()
+    movie = db.movies.find_one({"_id": ObjectId(movie_id)})
+    if movie:
+        movie_dict = {
+            'id': str(movie['_id']),
+            'title': movie['title'],
+            'director': movie['director'],
+            'release_year': movie['release_year'],
+            'genre': movie['genre'],
+            'rating': movie['rating'],
+            'created_at': movie['created_at'] if isinstance(movie['created_at'], str) else movie['created_at'].isoformat()
+        }
+        return jsonify(movie_dict)
+    else:
+        return jsonify({"error": "Movie not found"}), 404
+
 @app.route('/api/movies/<string:movie_id>', methods=['PUT'])
 @role_required(['admin'])
 def update_movie(movie_id):
-    data = request.json
-    db = get_mongo_connection()
-    update_data = {
-        "title": data['title'],
-        "director": data['director'],
-        "release_year": data['releaseYear'],
-        "genre": data['genre'],
-        "rating": data['rating']
+    data = request.get_json()
+    update_fields = {
+        "title": data.get('title'),
+        "director": data.get('director'),
+        "release_year": data.get('releaseYear', None),  # Provide a default value if 'releaseYear' is missing
+        "genre": data.get('genre'),
+        "rating": data.get('rating')
     }
     
-    try:
-        result = db.movies.update_one({"_id": ObjectId(movie_id)}, {"$set": update_data})
-        if result.matched_count == 0:
-            return jsonify({"error": "Movie not found"}), 404
-        return jsonify({"message": "Movie updated successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    # Remove keys with None values
+    update_fields = {k: v for k, v in update_fields.items() if v is not None}
+
+    db = get_mongo_connection()
+    result = db.movies.update_one(
+        {"_id": ObjectId(movie_id)},
+        {"$set": update_fields}
+    )
+
+    if result.modified_count > 0:
+        return jsonify({"message": "Movie updated successfully"}), 200
+    else:
+        return jsonify({"message": "No changes made to the movie"}), 400
 
 @app.route('/api/movies/<string:movie_id>', methods=['DELETE'])
 @role_required(['admin'])
