@@ -1,5 +1,5 @@
 // API endpoints
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 // DOM Elements
 const addMovieForm = document.getElementById('addMovieForm');
@@ -15,23 +15,28 @@ addMovieForm.addEventListener('submit', async (e) => {
         rating: parseFloat(document.getElementById('rating').value)
     };
 
+    // Modify your fetch request's response handling:
     try {
         const response = await fetch(`${API_URL}/movies`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include', // Add this to include cookies for session
             body: JSON.stringify(formData)
         });
 
+        const data = await response.json();
+        console.log('Server response:', data);
+        
         if (response.ok) {
             alert('Movie added successfully!');
-            window.location.href = '/';  // Redirect to the movie list page
+            window.location.href = '/';
         } else {
-            const data = await response.json();
             alert(`Error: ${data.error}`);
         }
     } catch (error) {
+        console.error('Full error:', error);
         alert('Error adding movie: ' + error.message);
     }
 });

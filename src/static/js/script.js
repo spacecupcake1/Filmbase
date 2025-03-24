@@ -1,5 +1,5 @@
 // API endpoints
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 // DOM Elements
 const movieList = document.querySelector('.movie-list tbody');
@@ -103,9 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const updatedMovie = {
             title: editMovieForm.editTitle.value,
             director: editMovieForm.editDirector.value,
-            release_year: editMovieForm.editReleaseYear.value,
+            releaseYear: parseInt(editMovieForm.editReleaseYear.value),  // Changed to camelCase and added parseInt
             genre: editMovieForm.editGenre.value,
-            rating: editMovieForm.editRating.value
+            rating: parseFloat(editMovieForm.editRating.value)  // Added parseFloat for consistency
         };
         fetch(`/api/movies/${movieId}`, {
             method: 'PUT',

@@ -9,7 +9,8 @@ from bson import ObjectId
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
-CORS(app)
+# Replace the current CORS configuration with this:
+CORS(app, supports_credentials=True)
 
 # MongoDB configuration
 MONGO_DB_CONFIG = {
@@ -139,11 +140,22 @@ def get_movies():
         movie_list.append(movie_dict)
     return jsonify({'movies': movie_list})
 
+
 @app.route('/api/movies', methods=['POST'])
 @role_required(['admin'])
 def add_movie():
     data = request.json
+    print("Received movie data:", data)  # Add this debug line
     db = get_mongo_connection()
+    
+    # Test the DB connection
+    try:
+        db.command('ping')
+        print("MongoDB connection successful")
+    except Exception as e:
+        print("MongoDB connection failed:", str(e))
+        return jsonify({"error": "Database connection failed"}), 500
+        
     movie = {
         "title": data['title'],
         "director": data['director'],
@@ -155,8 +167,10 @@ def add_movie():
     
     try:
         result = db.movies.insert_one(movie)
+        print("Movie inserted with ID:", result.inserted_id)
         return jsonify({"message": "Movie added successfully", "id": str(result.inserted_id)})
     except Exception as e:
+        print("Error inserting movie:", str(e))
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/movies/<string:movie_id>', methods=['GET'])
